@@ -132,6 +132,9 @@ function redactResponseText(text) {
 
 function copyResponseHeaders(upstream, res) {
   // Only copy headers that are meaningful to the MCP client.
+  // Deliberately excludes "www-authenticate": Sophie auth is handled entirely
+  // server-side (getValidAccessToken), so forwarding its challenge here would
+  // make Claude try to run its own OAuth flow against Sophie's auth server.
   const headersToCopy = [
     "content-type",
     "cache-control",
@@ -140,7 +143,6 @@ function copyResponseHeaders(upstream, res) {
     "mcp-session-id",
     "mcp-protocol-version",
     "last-event-id",
-    "www-authenticate",
     "allow",
     "retry-after"
   ];

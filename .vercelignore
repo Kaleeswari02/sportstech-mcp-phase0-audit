@@ -1,0 +1,6 @@
+.data
+.env
+docs
+sql
+docker-compose.yml
+sportstech_audit_backup.sql

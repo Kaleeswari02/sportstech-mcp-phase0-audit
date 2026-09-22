@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: sportstech-phase0-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sportstech_audit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - sportstech_phase0_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sportstech_phase0_pgdata:

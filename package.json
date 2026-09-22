@@ -1,0 +1,20 @@
+{
+  "name": "sportstech-phase0-audit-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phase 0 MCP logging proxy for auditing vendor MCP usage.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "report": "node src/report.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  }
+}

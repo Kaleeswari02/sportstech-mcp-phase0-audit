@@ -1,0 +1,9 @@
+node_modules/
+.data/
+.data/sophie-oauth.json
+.env
+*.log
+.DS_Store
+coverage/
+.vercel/
+sportstech_audit_backup.sql

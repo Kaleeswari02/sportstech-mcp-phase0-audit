@@ -50,6 +50,10 @@ export async function ensureDatabase() {
       error_message TEXT
     );
 
+    ALTER TABLE mcp_audit_logs
+      ADD COLUMN IF NOT EXISTS response_body TEXT,
+      ADD COLUMN IF NOT EXISTS response_body_truncated BOOLEAN NOT NULL DEFAULT FALSE;
+
     CREATE INDEX IF NOT EXISTS idx_mcp_audit_logs_timestamp
       ON mcp_audit_logs(timestamp);
 
@@ -166,14 +170,18 @@ export async function finishLog(id, entry) {
          completed_at = NOW(),
          latency_ms = EXTRACT(EPOCH FROM (NOW() - started_at)) * 1000,
          status = $4,
-         error_message = $5
+         error_message = $5,
+         response_body = $6,
+         response_body_truncated = $7
      WHERE id = $1`,
     [
       id,
       entry.responseStatus ?? null,
       entry.responseContentType ?? null,
       entry.status,
-      entry.errorMessage ?? null
+      entry.errorMessage ?? null,
+      entry.responseBody ?? null,
+      entry.responseBodyTruncated ?? false
     ]
   );
 }

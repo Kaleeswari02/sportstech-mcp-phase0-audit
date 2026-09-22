@@ -247,7 +247,7 @@ Never commit:
 - cookies
 - customer data
 
-The database stores redacted tool arguments for `tools/call`.
+The database stores redacted tool arguments for `tools/call`, and redacted response bodies (capped at `RESPONSE_BODY_MAX_BYTES`, default 200KB — see `response_body`/`response_body_truncated` on `mcp_audit_logs`). Redaction only applies when a response is a single JSON document; SSE/plain-text bodies are stored as-is, so avoid putting real secrets in Sophie's tool output if that matters for your audit retention policy.
 
 For a production/remote deployment, add:
 

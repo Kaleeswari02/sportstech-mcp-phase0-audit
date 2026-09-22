@@ -92,6 +92,44 @@ function extractMcpMetadata(body) {
   };
 }
 
+// Cap how much of the response body we persist so a huge tool result can't
+// bloat the audit table; the client still receives the full, uncapped stream.
+const RESPONSE_BODY_MAX_BYTES = Number(
+  process.env.RESPONSE_BODY_MAX_BYTES || 200_000
+);
+
+function captureResponseBody(nodeStream) {
+  const chunks = [];
+  let capturedBytes = 0;
+  let truncated = false;
+
+  nodeStream.on("data", (chunk) => {
+    if (capturedBytes >= RESPONSE_BODY_MAX_BYTES) {
+      truncated = true;
+      return;
+    }
+    const remaining = RESPONSE_BODY_MAX_BYTES - capturedBytes;
+    chunks.push(chunk.length > remaining ? chunk.subarray(0, remaining) : chunk);
+    capturedBytes += chunk.length;
+    if (chunk.length > remaining) truncated = true;
+  });
+
+  return {
+    get: () => redactResponseText(Buffer.concat(chunks).toString("utf8")),
+    isTruncated: () => truncated
+  };
+}
+
+function redactResponseText(text) {
+  try {
+    return JSON.stringify(redact(JSON.parse(text)));
+  } catch {
+    // Not a single JSON document (e.g. an SSE stream with multiple "data:"
+    // frames, or plain text) - store as-is rather than losing the audit trail.
+    return text;
+  }
+}
+
 function copyResponseHeaders(upstream, res) {
   // Only copy headers that are meaningful to the MCP client.
   const headersToCopy = [
@@ -192,12 +230,16 @@ async function proxyRequest(req, res) {
 
       // Web ReadableStream -> Node Readable.
       const nodeStream = Readable.fromWeb(upstream.body);
+      const capture = captureResponseBody(nodeStream);
+
       nodeStream.on("error", async (error) => {
         await finishLog(auditId, {
           responseStatus: upstream.status,
           responseContentType: upstream.headers.get("content-type"),
           status: "error",
-          errorMessage: error.message
+          errorMessage: error.message,
+          responseBody: capture.get(),
+          responseBodyTruncated: capture.isTruncated()
         }).catch(console.error);
 
         if (!res.headersSent) res.status(502);
@@ -208,7 +250,9 @@ async function proxyRequest(req, res) {
         await finishLog(auditId, {
           responseStatus: upstream.status,
           responseContentType: upstream.headers.get("content-type"),
-          status: upstream.ok ? "success" : "upstream_error"
+          status: upstream.ok ? "success" : "upstream_error",
+          responseBody: capture.get(),
+          responseBodyTruncated: capture.isTruncated()
         }).catch(console.error);
       });
 

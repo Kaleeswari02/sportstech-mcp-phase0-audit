@@ -7,3 +7,5 @@ node_modules/
 coverage/
 .vercel/
 sportstech_audit_backup.sql
+
+.vercel

@@ -132,9 +132,6 @@ function redactResponseText(text) {
 
 function copyResponseHeaders(upstream, res) {
   // Only copy headers that are meaningful to the MCP client.
-  // Deliberately excludes "www-authenticate": Sophie auth is handled entirely
-  // server-side (getValidAccessToken), so forwarding its challenge here would
-  // make Claude try to run its own OAuth flow against Sophie's auth server.
   const headersToCopy = [
     "content-type",
     "cache-control",
@@ -143,6 +140,7 @@ function copyResponseHeaders(upstream, res) {
     "mcp-session-id",
     "mcp-protocol-version",
     "last-event-id",
+    "www-authenticate",
     "allow",
     "retry-after"
   ];
@@ -256,9 +254,15 @@ async function proxyRequest(req, res) {
           responseBody: capture.get(),
           responseBodyTruncated: capture.isTruncated()
         }).catch(console.error);
+
+        res.end();
       });
 
-      nodeStream.pipe(res);
+      // end: false - otherwise pipe() ends the response as soon as the stream
+      // drains, before the finishLog write above finishes. On Vercel the
+      // function can be frozen right after the response ends, killing that
+      // write mid-flight for larger/slower responses.
+      nodeStream.pipe(res, { end: false });
       return;
     }
 
